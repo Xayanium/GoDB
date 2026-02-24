@@ -1,0 +1,45 @@
+# Raft 分布式系统配置文件
+
+server:
+  id: 0                    # 服务器 ID（启动时可通过命令行参数覆盖）
+  host: "127.0.0.1"        # 监听地址
+  port: 8080               # 监听端口
+  environment: "dev"       # 环境：dev/test/prod
+
+persistence:
+  enabled: true                          # 是否启用持久化
+  data_dir: "./data"                     # 数据根目录
+  raft_state_dir: "./data/raft"          # Raft 状态存储目录
+  snapshot_dir: "./data/snapshots"       # 快照存储目录
+  sync_write: true                       # 是否使用 fsync 同步写入
+  use_checksum: true                     # 是否使用 CRC32 校验和
+  compress_snapshot: false               # 是否压缩快照
+  max_backups: 3                         # 保留的最大备份数量
+  backup_interval: "1h"                  # 备份间隔
+
+logging:
+  level: "info"                          # 日志级别：debug/info/warn/error
+  format: "text"                         # 日志格式：json/text
+  output: "both"                         # 输出：stdout/file/both
+  file_path: "./data/logs/raft.log"      # 日志文件路径
+  max_size: 100                          # 单个日志文件最大大小（MB）
+  max_backups: 10                        # 保留的最大日志文件数量
+  max_age: 30                            # 日志保留天数
+  compress: true                         # 是否压缩旧日志
+  enable_raft_log: false                 # 是否启用 Raft 详细日志
+
+raft:
+  election_timeout_min: 250              # 选举超时最小值（毫秒）
+  election_timeout_max: 400              # 选举超时最大值（毫秒）
+  heartbeat_interval: 30                 # 心跳间隔（毫秒）
+  apply_interval: 10                     # 应用日志间隔（毫秒）
+  snapshot_threshold: 1000               # 快照阈值（日志条目数）
+  max_log_size: 10485760                 # 最大日志大小（10MB）
+
+network:
+  rpc_timeout: 5000                      # RPC 超时时间（毫秒）
+  max_retries: 3                         # 最大重试次数
+  enable_tls: false                      # 是否启用 TLS
+  cert_file: ""                          # TLS 证书文件路径
+  key_file: ""                           # TLS 密钥文件路径
+  max_connections: 100                   # 最大连接数
