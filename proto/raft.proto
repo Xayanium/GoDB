@@ -1,0 +1,85 @@
+syntax = "proto3";
+
+package raft;
+
+option go_package = "./raft";
+
+service RaftService {
+  // RequestVote RPC - 用于选举投票（Candidate 向其他节点 RPC 请求）
+  rpc RequestVote(RequestVoteArgs) returns (RequestVoteReply);
+
+  // AppendEntries RPC - 用于日志复制和心跳（Leader向Follower RPC 请求）
+  rpc AppendEntries(AppendEntriesArgs) returns (AppendEntriesReply);
+
+  // InstallSnapshot RPC - 用于快照安装（Leader向Follower RPC 请求）
+  rpc InstallSnapshot(InstallSnapshotArgs) returns (InstallSnapshotReply);
+}
+
+// ============================================================================
+// RequestVote RPC Messages
+// ============================================================================
+
+// RequestVote RPC 请求参数
+message RequestVoteArgs {
+  int32 term = 1;           // 请求投票的候选人 任期号
+  int32 candidate_id = 2;   // 请求投票的候选人 ID
+  int32 last_log_index = 3; // 候选人最后日志条目的索引
+  int32 last_log_term = 4;  // 候选人最后日志条目的任期号
+}
+
+// RequestVote RPC 响应参数
+message RequestVoteReply {
+  int32 term = 1;          // 接收方节点当前的任期
+  bool vote_granted = 2;   // 接收方节点是否投票
+}
+
+
+// ============================================================================
+// AppendEntries RPC Messages
+// ============================================================================
+
+// LogEntry 日志条目
+message LogEntry {
+  int32 term = 1;           // 该日志条目产生时 leader 的任期
+  bool command_valid = 2;   // Raft层 通过 applyCh 通知上层时，用来区分该条目是否需要上层的状态机执行
+  bytes command = 3;        // 上层传入的命令内容
+}
+
+// AppendEntries RPC 请求参数
+message AppendEntriesArgs {
+  int32 term = 1;           // Leader 的任期号
+  int32 leader_id = 2;      // Leader 的 ID，便于 Follower 重定向客户端
+  int32 prev_log_index = 3; // leader 认为 Follower 的最后一条日志在自己本地日志中的Index
+  int32 prev_log_term = 4;  // prev_log_index 日志产生时对应的 leader term
+  repeated LogEntry entries = 5; // leader 希望 follower 追加（或覆盖）的一串日志
+  int32 leader_commit = 6;  // leader 当前已提交的位置，用于 follower 推进自己的 commitIndex
+}
+
+// AppendEntries RPC 响应参数
+message AppendEntriesReply {
+  int32 term = 1;           // follower 当前任期
+  bool success = 2;         // follower 这次追加是否成功
+
+  // 加速 leader 回退的冲突提示字段（follower 和 leader 在 prev_log_index 处日志 term 不同）
+  int32 conflict_term = 3;  // follower 在 prev_log_index 处日志的 term
+  int32 conflict_index = 4; // conflict_term 在 follower 日志中最早出现的位置
+}
+
+
+// ============================================================================
+// InstallSnapshot RPC Messages
+// ============================================================================
+
+// InstallSnapshot RPC 请求参数
+message InstallSnapshotArgs {
+  int32 term = 1;                // Leader 的任期号
+  int32 leader_id = 2;           // Leader 的 ID
+  int32 last_included_index = 3; // leader要求follower安装的快照中，最后一条日志index
+  int32 last_included_term = 4;  // leader要求follower安装的快照中，最后一条日志term
+  bytes snapshot = 5;            // leader要求follower安装的快照的数据
+}
+
+// InstallSnapshot RPC 响应参数
+message InstallSnapshotReply {
+  int32 term = 1;  // 当前任期号，用于 Leader 更新自己
+}
