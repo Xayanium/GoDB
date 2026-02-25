@@ -32,11 +32,13 @@ func DefaultConfig() *GlobalConfig {
 			MaxBackups:       3,
 			BackupInterval:   "1h",
 		},
-		Logging: LoggingConfig{
+		Logging: LogConfig{
 			Level:         "info",
 			Format:        "text",
 			Output:        "both",
-			FilePath:      "./data/logs/raft.log",
+			RaftLogPath:   "./data/logs/raft.log",
+			KVLogPath:     "./data/logs/kv.log",
+			CtrlerLogPath: "./data/logs/ctrler.log",
 			MaxSize:       100,
 			MaxBackups:    10,
 			MaxAge:        30,
@@ -61,26 +63,26 @@ func DefaultConfig() *GlobalConfig {
 }
 
 // Load 加载配置文件
-func Load(configPath string) (*GlobalConfig, error) {
+func Load(configPath string) *GlobalConfig {
 	cfg := DefaultConfig()
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		return cfg, nil
+		return cfg
 	}
 
 	data, err := os.ReadFile(configPath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read config file: %w", err)
+		panic(fmt.Errorf("failed to read config file: %w", err))
 	}
 
 	if err := yaml.Unmarshal(data, cfg); err != nil {
-		return nil, fmt.Errorf("failed to parse config file: %w", err)
+		panic(fmt.Errorf("failed to parse config file: %w", err))
 	}
 
 	if err := createDirectories(cfg); err != nil {
-		return nil, fmt.Errorf("failed to create directories: %w", err)
+		panic(err)
 	}
 
-	return cfg, nil
+	return cfg
 }
 
 // Get 获取全局配置
@@ -93,16 +95,13 @@ func Get() *GlobalConfig {
 	return globalConfig
 }
 
-func Reload(configPath string) error {
+func Reload(configPath string) {
 	mu.Lock()
 	defer mu.Unlock()
 
-	cfg, err := Load(configPath)
-	if err != nil {
-		return err
-	}
+	cfg := Load(configPath)
+
 	globalConfig = cfg
-	return nil
 }
 
 // createDirectories 创建必要的目录
@@ -111,12 +110,16 @@ func createDirectories(cfg *GlobalConfig) error {
 		cfg.Persistence.DataDir,
 		cfg.Persistence.RaftStateDir,
 		cfg.Persistence.SnapshotDir,
-		filepath.Dir(cfg.Logging.FilePath),
+		filepath.Dir(cfg.Logging.RaftLogPath),
+		filepath.Dir(cfg.Logging.KVLogPath),
+		filepath.Dir(cfg.Logging.CtrlerLogPath),
 	}
 
 	for _, dir := range dirs {
-		if err := os.MkdirAll(dir, 0755); err != nil {
-			return fmt.Errorf("failed to create directory %s: %w", dir, err)
+		if _, err := os.Stat(dir); os.IsNotExist(err) {
+			if err = os.MkdirAll(dir, 0755); err != nil {
+				return fmt.Errorf("failed to create directory %s: %w", dir, err)
+			}
 		}
 	}
 

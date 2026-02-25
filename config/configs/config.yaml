@@ -18,15 +18,17 @@ persistence:
   backup_interval: "1h"                  # 备份间隔
 
 logging:
-  level: "info"                          # 日志级别：debug/info/warn/error
-  format: "text"                         # 日志格式：json/text
-  output: "both"                         # 输出：stdout/file/both
-  file_path: "./data/logs/raft.log"      # 日志文件路径
-  max_size: 100                          # 单个日志文件最大大小（MB）
-  max_backups: 10                        # 保留的最大日志文件数量
-  max_age: 30                            # 日志保留天数
-  compress: true                         # 是否压缩旧日志
-  enable_raft_log: false                 # 是否启用 Raft 详细日志
+  level: "info"                              # 日志级别：debug/info/warn/error
+  format: "text"                             # 日志格式：json/text
+  output: "both"                             # 输出：stdout/file/both
+  raft_log_path: "./data/logs/raft.log"      # Raft日志文件路径
+  kv_log_path: "./data/logs/kv.log"          # ShardKV日志文件路径
+  ctrler_log_path: "./data/logs/ctrler.log"  # Ctrler日志文件路径
+  max_size: 100                              # 单个日志文件最大大小（MB）
+  max_backups: 10                            # 保留的最大日志文件数量
+  max_age: 30                                # 日志保留天数
+  compress: true                             # 是否压缩旧日志
+  enable_raft_log: false                     # 是否启用 Raft 详细日志
 
 raft:
   election_timeout_min: 250              # 选举超时最小值（毫秒）

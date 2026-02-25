@@ -4,7 +4,7 @@ package config
 type GlobalConfig struct {
 	Server      ServerConfig      `yaml:"server"`
 	Persistence PersistenceConfig `yaml:"persistence"`
-	Logging     LoggingConfig     `yaml:"logging"`
+	Logging     LogConfig         `yaml:"logging"`
 	Raft        RaftConfig        `yaml:"raft"`
 	Network     NetworkConfig     `yaml:"network"`
 }
@@ -30,12 +30,14 @@ type PersistenceConfig struct {
 	BackupInterval   string `yaml:"backup_interval"`   // 备份间隔
 }
 
-// LoggingConfig 日志配置
-type LoggingConfig struct {
+// LogConfig 日志配置
+type LogConfig struct {
 	Level         string `yaml:"level"`           // 日志级别：debug/info/warn/error
 	Format        string `yaml:"format"`          // 日志格式：json/text
 	Output        string `yaml:"output"`          // 输出：stdout/file/both
-	FilePath      string `yaml:"file_path"`       // 日志文件路径
+	RaftLogPath   string `yaml:"raft_log_path"`   // 日志文件路径
+	KVLogPath     string `yaml:"kv_log_path"`     // Shard KV 日志文件路径
+	CtrlerLogPath string `yaml:"ctrler_log_path"` // Shard Ctrler 日志文件路径
 	MaxSize       int    `yaml:"max_size"`        // 单个日志文件最大大小（MB）
 	MaxBackups    int    `yaml:"max_backups"`     // 最大日志文件数量
 	MaxAge        int    `yaml:"max_age"`         // 日志保留天数
