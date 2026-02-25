@@ -4,7 +4,7 @@
 // 	protoc        v5.29.3
 // source: proto/raft.proto
 
-package raft
+package raftrpc
 
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
@@ -521,7 +521,7 @@ const file_proto_raft_proto_rawDesc = "" +
 	"\vRaftService\x12<\n" +
 	"\vRequestVote\x12\x15.raft.RequestVoteArgs\x1a\x16.raft.RequestVoteReply\x12B\n" +
 	"\rAppendEntries\x12\x17.raft.AppendEntriesArgs\x1a\x18.raft.AppendEntriesReply\x12H\n" +
-	"\x0fInstallSnapshot\x12\x19.raft.InstallSnapshotArgs\x1a\x1a.raft.InstallSnapshotReplyB\bZ\x06./raftb\x06proto3"
+	"\x0fInstallSnapshot\x12\x19.raft.InstallSnapshotArgs\x1a\x1a.raft.InstallSnapshotReplyB\x10Z\x0e./raft;raftrpcb\x06proto3"
 
 var (
 	file_proto_raft_proto_rawDescOnce sync.Once

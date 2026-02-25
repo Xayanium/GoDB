@@ -1,5 +1,8 @@
 # Makefile
-.PHONY: proto
+.PHONY: proto raft shardctrler shardkv
+
+proto: raft shardctrler shardkv
+
 raft:
 	protoc --go_out=./rpc --go-grpc_out=./rpc proto/raft.proto
 shardctrler:

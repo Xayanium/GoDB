@@ -4,7 +4,7 @@
 // - protoc             v5.29.3
 // source: proto/raft.proto
 
-package raft
+package raftrpc
 
 import (
 	context "context"

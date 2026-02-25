@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package raft;
 
-option go_package = "./raft";
+option go_package = "./raft;raftrpc";
 
 service RaftService {
   // RequestVote RPC - 用于选举投票（Candidate 向其他节点 RPC 请求）
