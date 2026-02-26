@@ -5,20 +5,20 @@ import raftrpc "GoDB/rpc/raft"
 type Log struct {
 	// 快照覆盖到的最后一个日志索引
 	// 由于索引 <= snapLastIdx 的日志内容已经被压缩进快照，不再需要保留之前的条目
-	snapLastIdx int
+	SnapLastIdx int
 
-	snapLastTerm int // snapLastIdx 日志对应的 term，用于 Leader/Follower 日志一致性检查
+	SnapLastTerm int // snapLastIdx 日志对应的 term，用于 Leader/Follower 日志一致性检查
 
-	snapshot []byte // 快照的具体内容
+	Snapshot []byte // 快照的具体内容
 
 	tailLog []*raftrpc.LogEntry // 只存没有被快照的剩余日志（从下标1开始存），需要与真实全局日志进行下标转换
 }
 
 func NewLog(snapLastIdx, snapLastTerm int, snapshot []byte) *Log {
 	rl := &Log{
-		snapLastIdx:  snapLastIdx,
-		snapLastTerm: snapLastTerm,
-		snapshot:     snapshot,
+		SnapLastIdx:  snapLastIdx,
+		SnapLastTerm: snapLastTerm,
+		Snapshot:     snapshot,
 	}
 	rl.tailLog = make([]*raftrpc.LogEntry, 0)
 	rl.tailLog = append(rl.tailLog, &raftrpc.LogEntry{Term: int32(snapLastTerm)}) // 占位，保持 tailLog 从下标1开始存
@@ -31,15 +31,15 @@ func NewLog(snapLastIdx, snapLastTerm int, snapshot []byte) *Log {
 
 // 返回全局日志（真实日志）的长度
 func (rl *Log) size() int {
-	return rl.snapLastIdx + len(rl.tailLog) - 1 // tailLog 从下标1开始存
+	return rl.SnapLastIdx + len(rl.tailLog) - 1 // tailLog 从下标1开始存
 }
 
 // 将全局日志索引映射到 tailLog 的数组下标索引（tailLog 从下标1开始存）
 func (rl *Log) idx(logicIdx int) int {
-	if logicIdx < rl.snapLastIdx || logicIdx > rl.size() {
+	if logicIdx < rl.SnapLastIdx || logicIdx > rl.size() {
 		panic("invalid logic log index")
 	}
-	return logicIdx - rl.snapLastIdx
+	return logicIdx - rl.SnapLastIdx
 }
 
 // 返回全局日志索引对应的全局日志信息
@@ -66,7 +66,7 @@ func (rl *Log) firstFor(term int) int {
 
 // 返回 tailLog 中从 startIdx（全局日志index） 开始到末尾的所有日志条目。用于 leader 构造 AppendEntries
 func (rl *Log) tail(startIdx int) []*raftrpc.LogEntry {
-	if startIdx <= rl.snapLastIdx || startIdx > rl.size() {
+	if startIdx <= rl.SnapLastIdx || startIdx > rl.size() {
 		return nil
 	}
 	return rl.tailLog[rl.idx(startIdx):]
