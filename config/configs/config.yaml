@@ -9,8 +9,8 @@ server:
 persistence:
   enabled: true                          # 是否启用持久化
   data_dir: "./data"                     # 数据根目录
-  raft_state_dir: "./data/raft"          # Raft 状态存储目录
-  snapshot_dir: "./data/snapshots"       # 快照存储目录
+  raftstate_path: "./data/raftstate"     # Raft 状态存储文件
+  snapshot_path: "./data/snapshots"       # 快照存储文件
   sync_write: true                       # 是否使用 fsync 同步写入
   use_checksum: true                     # 是否使用 CRC32 校验和
   compress_snapshot: false               # 是否压缩快照

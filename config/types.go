@@ -21,8 +21,8 @@ type ServerConfig struct {
 type PersistenceConfig struct {
 	Enabled          bool   `yaml:"enabled"`           // 是否启用持久化
 	DataDir          string `yaml:"data_dir"`          // 数据根目录
-	RaftStateDir     string `yaml:"raft_state_dir"`    // Raft 状态目录
-	SnapshotDir      string `yaml:"snapshot_dir"`      // 快照目录
+	RaftStatePath    string `yaml:"raftstate_path"`    // Raft 状态文件路径
+	SnapshotPath     string `yaml:"snapshot_path"`     // 快照文件路径
 	SyncWrite        bool   `yaml:"sync_write"`        // 是否同步写入（fsync）
 	UseChecksum      bool   `yaml:"use_checksum"`      // 是否使用校验和
 	CompressSnapshot bool   `yaml:"compress_snapshot"` // 是否压缩快照

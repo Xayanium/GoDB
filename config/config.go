@@ -24,8 +24,8 @@ func DefaultConfig() *GlobalConfig {
 		Persistence: PersistenceConfig{
 			Enabled:          true,
 			DataDir:          "./data",
-			RaftStateDir:     "./data/raft",
-			SnapshotDir:      "./data/snapshots",
+			RaftStatePath:    "./data/raft",
+			SnapshotPath:     "./data/snapshots",
 			SyncWrite:        true,
 			UseChecksum:      true,
 			CompressSnapshot: false,
@@ -108,8 +108,6 @@ func Reload(configPath string) {
 func createDirectories(cfg *GlobalConfig) error {
 	dirs := []string{
 		cfg.Persistence.DataDir,
-		cfg.Persistence.RaftStateDir,
-		cfg.Persistence.SnapshotDir,
 		filepath.Dir(cfg.Logging.RaftLogPath),
 		filepath.Dir(cfg.Logging.KVLogPath),
 		filepath.Dir(cfg.Logging.CtrlerLogPath),
