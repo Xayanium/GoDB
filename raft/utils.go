@@ -2,6 +2,7 @@ package raft
 
 import (
 	"GoDB/tools"
+	"encoding/json"
 	"fmt"
 )
 
@@ -42,4 +43,21 @@ func LOG(peerId int, term int, topic logTopic, msg string) {
 	default:
 		tools.RaftLogger.Info(msg, "peer", peerId, "term", term)
 	}
+}
+
+func Serialize(data interface{}) []byte {
+	marshal, err := json.Marshal(data)
+	if err != nil {
+		return nil
+	}
+	return marshal
+}
+
+func Deserialize(data []byte) interface{} {
+	var res interface{}
+	err := json.Unmarshal(data, &res)
+	if err != nil {
+		return nil
+	}
+	return res
 }
