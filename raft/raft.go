@@ -32,11 +32,11 @@ type ApplyMsg struct {
 }
 
 type Raft struct {
-	mu        sync.Mutex                   // 保护该 peer 的共享状态（term、log、commitIndex、nextIndex…）
-	peers     []*raftrpc.RaftServiceClient // 与所有其他节点通信的 RPC 端点数组。peers[i] 代表“给 i 发 RPC”。
-	persister *tools.Persister             // 该节点的持久化器，保存/读取 Raft 的持久化状态（term、votedFor、log、snapshot 等）
-	me        int                          // 节点自己在 peers[] 里的编号
-	dead      int32                        // 被 Kill() 标记后退出后台循环用的标志位
+	mu        sync.Mutex                  // 保护该 peer 的共享状态（term、log、commitIndex、nextIndex…）
+	peers     []raftrpc.RaftServiceClient // 与所有其他节点通信的 RPC 端点数组。peers[i] 代表“给 i 发 RPC”。
+	persister *tools.Persister            // 该节点的持久化器，保存/读取 Raft 的持久化状态（term、votedFor、log、snapshot 等）
+	me        int                         // 节点自己在 peers[] 里的编号
+	dead      int32                       // 被 Kill() 标记后退出后台循环用的标志位
 
 	role        int // 节点当前角色：Follower/Candidate/Leader
 	CurrentTerm int // 节点当前任期号
@@ -57,16 +57,21 @@ type Raft struct {
 	snapPending bool          // 有一个快照需要优先安装/发送到 applyCh
 	applyCond   *sync.Cond    // 用于唤醒 apply goroutine。
 
-	electionStart   time.Time     // 上一次“重置选举计时器”的时间点
-	electionTimeout time.Duration // 本节点的随机选举超时时间，每次进入 follower/candidate 或每轮选举通常会重置。
+	//electionStart   time.Time     // 上一次“重置选举计时器”的时间点
+	//electionTimeout time.Duration // 本节点的随机选举超时时间，每次进入 follower/candidate 或每轮选举通常会重置。
+	electionTimer *time.Timer // 选举超时计时器，electionTicker() 循环里检测该计时器是否超时
+
+	raftrpc.UnimplementedRaftServiceServer
 }
+
+var _ raftrpc.RaftServiceServer = (*Raft)(nil) // 编译时检查 Raft 是否实现了 raftrpc.RaftServiceServer 接口（RPC 服务端代码实现）
 
 // ============================================================================
 // Raft 对外（上层服务）接口
 // ============================================================================
 
 // Make 创建并初始化一个 Raft 节点，恢复持久化状态，并启动后台协程
-func Make(peers []*raftrpc.RaftServiceClient, me int, persister *tools.Persister, applyCh chan ApplyMsg) *Raft {
+func Make(peers []raftrpc.RaftServiceClient, me int, persister *tools.Persister, applyCh chan ApplyMsg) *Raft {
 	// 初始化 Raft 节点
 	rf := &Raft{
 		mu:          sync.Mutex{},
@@ -86,6 +91,12 @@ func Make(peers []*raftrpc.RaftServiceClient, me int, persister *tools.Persister
 
 	// 从持久化的数据文件读取 raftstate、snapshot 配置，覆盖部分初始值
 	rf.readPersist()
+
+	// 初始化选举超时计时器
+	rf.mu.Lock()
+	rf.electionTimer = time.NewTimer(3000 * time.Millisecond)
+	rf.resetTimer()
+	rf.mu.Unlock()
 
 	// todo: 启动后台协程循环：选举、日志复制、应用日志、快照
 	// go rf.electionTicker()
@@ -147,7 +158,7 @@ func (rf *Raft) becomeLeader() {
 		rf.nextIndex[peer] = rf.log.size()
 		rf.matchIndex[peer] = 0
 	}
-	LOG(rf.me, rf.CurrentTerm, DLeader, fmt.Sprintf("Peer %d become Leader in Term_%d", rf.me, rf.CurrentTerm))
+	LOG(rf.me, rf.CurrentTerm, DLeader, fmt.Sprintf("Peer_%d become Leader in Term_%d", rf.me, rf.CurrentTerm))
 }
 
 // 节点收到的 RPC（RequestVote / AppendEntries / InstallSnapshot）中带有更大的 term、Candidate 在选举中发现别人的 term 更大，将当前节点切为 Follower
@@ -157,7 +168,7 @@ func (rf *Raft) becomeFollower(term int) {
 		return
 	}
 	rf.role = Follower
-	LOG(rf.me, rf.CurrentTerm, DLog, fmt.Sprintf("Peer %d become Follower in Term_%d -> Term_%d", rf.me, rf.CurrentTerm, term))
+	LOG(rf.me, rf.CurrentTerm, DLog, fmt.Sprintf("Peer_%d become Follower in Term_%d -> Term_%d", rf.me, rf.CurrentTerm, term))
 
 	// 如果接收到大于自己 term 的消息，当前节点在上一轮 term 的投票失效，需重置投票状态
 	if term > rf.CurrentTerm {
@@ -169,8 +180,8 @@ func (rf *Raft) becomeFollower(term int) {
 
 // electionTicker() 检测到选举超时（长时间没收到 leader 心跳）
 func (rf *Raft) becomeCandidate() {
-	// 只有 Follower 能变 Candidate
-	if rf.role != Follower {
+	// Leader 不能变 Candidate
+	if rf.role == Leader {
 		return
 	}
 	rf.role = Candidate
@@ -179,11 +190,11 @@ func (rf *Raft) becomeCandidate() {
 	rf.CurrentTerm++
 	rf.VotedFor = rf.me
 	rf.persist() // 修改了 Raft 论文要求的需持久化的字段 CurrentTerm、VotedFor
-	LOG(rf.me, rf.CurrentTerm, DVote, fmt.Sprintf("Peer %d become Candidate in Term_%d -> Term_%d", rf.me, rf.CurrentTerm-1, rf.CurrentTerm))
+	LOG(rf.me, rf.CurrentTerm, DVote, fmt.Sprintf("Peer_%d become Candidate in Term_%d -> Term_%d", rf.me, rf.CurrentTerm-1, rf.CurrentTerm))
 }
 
 // ============================================================================
-// Raft 一些辅助方法
+// 全局辅助方法
 // ============================================================================
 
 // 角色是 Leader 或 Candidate 这样的有特殊性质且存在相互竞争的角色，在锁外做了 耗时/异步工作（RPC、sleep、wait）的 goroutine，

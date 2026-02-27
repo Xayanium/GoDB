@@ -73,7 +73,7 @@ func (rl *Log) tail(startIdx int) []*raftrpc.LogEntry {
 }
 
 // 返回 tailLog 中最后一条日志 在全局日志中的 index 与 term，供 RequestVote 中使用、 leader 初始化 nextIndex
-func (rl *Log) last() (int, int) {
+func (rl *Log) last() (lastIndex int, lastTerm int) {
 	index := rl.size()
 	if index == 0 {
 		return InvalidIndex, InvalidTerm
