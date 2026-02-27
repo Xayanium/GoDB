@@ -33,7 +33,7 @@ func (rf *Raft) persist() {
 	LOG(rf.me, rf.CurrentTerm, DPersist, "Persist RaftState and Snapshot")
 }
 
-func (rf *Raft) readPersist(data []byte) {
+func (rf *Raft) readPersist() {
 	raftState, err := rf.persister.ReadRaftState()
 	if err != nil {
 		LOG(rf.me, rf.CurrentTerm, DError, fmt.Sprintf("ReadPersist failed: %v", err))
