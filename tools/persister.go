@@ -18,21 +18,29 @@ func MakePersister() *Persister {
 }
 
 func (ps *Persister) Save(raftstate []byte, snapshot []byte) error {
-	if err := saveToDisk(ps.cfg.Persistence.RaftStateDir, raftstate); err != nil {
+	if err := saveToDisk(ps.cfg.Persistence.RaftStatePath, raftstate); err != nil {
 		return fmt.Errorf("save raft state failed: %w", err)
 	}
-	if err := saveToDisk(ps.cfg.Persistence.SnapshotDir, snapshot); err != nil {
+	if err := saveToDisk(ps.cfg.Persistence.SnapshotPath, snapshot); err != nil {
 		return fmt.Errorf("save snapshot failed: %w", err)
 	}
 	return nil
 }
 
 func (ps *Persister) ReadSnapshot() ([]byte, error) {
-	return loadFromDisk(ps.cfg.Persistence.SnapshotDir)
+	return loadFromDisk(ps.cfg.Persistence.SnapshotPath)
 }
 
 func (ps *Persister) ReadRaftState() ([]byte, error) {
-	return loadFromDisk(ps.cfg.Persistence.RaftStateDir)
+	return loadFromDisk(ps.cfg.Persistence.RaftStatePath)
+}
+
+func (ps *Persister) RaftStateSize() int64 {
+	return getFileSize(ps.cfg.Persistence.RaftStatePath)
+}
+
+func (ps *Persister) SnapshotSize() int64 {
+	return getFileSize(ps.cfg.Persistence.SnapshotPath)
 }
 
 func saveToDisk(filepath string, data []byte) error {
@@ -47,4 +55,12 @@ func loadFromDisk(filepath string) ([]byte, error) {
 		return nil, nil
 	}
 	return os.ReadFile(filepath)
+}
+
+func getFileSize(filepath string) int64 {
+	info, err := os.Stat(filepath)
+	if err != nil {
+		return 0
+	}
+	return info.Size()
 }
