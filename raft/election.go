@@ -9,6 +9,7 @@ import (
 	"time"
 )
 
+// 选举 ticker，Raft 节点初始化时会启动该协程循环，等待选举定时器超时触发，检查节点角色并决定是否发起选举
 func (rf *Raft) electionTicker() {
 	for !rf.isKilled() {
 		<-rf.electionTimer.C // 等待选举定时器触发
@@ -17,7 +18,7 @@ func (rf *Raft) electionTicker() {
 		if rf.role != Leader {
 			// 更改角色为 Candidate，重置超时计时器，向其他节点发起选举
 			rf.becomeCandidate()
-			rf.resetTimer()
+			rf.resetElectionTimer()
 			go rf.startElection(rf.CurrentTerm)
 		}
 		rf.mu.Unlock()
@@ -36,7 +37,7 @@ func (rf *Raft) startElection(term int) {
 
 	// 上下文检查，由于 electionTicker 和 startElection 锁不连续，节点的角色/任期可能已发生变化，只有在上下文未改变的情况下才发起 RPC 请求
 	//（比如期间选出 leader，并收到其心跳而变为follower）
-	if rf.contextCheck(Candidate, term) {
+	if !rf.contextCheck(Candidate, term) {
 		LOG(rf.me, rf.CurrentTerm, DWarn, fmt.Sprintf("Peer_%d Candidate context changed, stop Election", rf.me))
 		return
 	}
@@ -72,23 +73,23 @@ func (rf *Raft) askVote(peer int, args *raftrpc.RequestVoteArgs, votes *int, ter
 
 	// 2. Term 检查，判断自己是否是合法 Candidate
 	if int(reply.Term) > rf.CurrentTerm {
-		LOG(rf.me, rf.CurrentTerm, DVote, fmt.Sprintf("Found higher Term_%d from Peer_%d", args.Term, args.CandidateId))
+		LOG(rf.me, rf.CurrentTerm, DWarn, fmt.Sprintf("Found higher Term_%d from Peer_%d", args.Term, args.CandidateId))
 		rf.becomeFollower(int(reply.Term)) // 发现更大的 term，切换为 Follower
 		return
 	}
 
 	// 3. 上下文检查，由于 startElection 和 askVote 锁不连续，节点的角色/任期可能已发生变化，只有在上下文未改变的情况下才继续统计投票结果
-	if rf.contextCheck(Candidate, term) {
+	if !rf.contextCheck(Candidate, term) {
 		LOG(rf.me, rf.CurrentTerm, DWarn, fmt.Sprintf("Peer_%d Candidate context changed, ignore RequestVote reply from Peer_%d", rf.me, peer))
 		return
 	}
 
-	// 4. 统计投票结果
+	// 4. 统计投票结果，决定节点是否当选 leader（每次收到RPC响应后都应判断一次）
 	if reply.VoteGranted {
 		*votes++
 		if *votes >= len(rf.peers)/2+1 {
 			rf.becomeLeader()
-			//todo: go rf.replicationTicker(term) // 立即对其他节点进行日志同步或心跳（AppendEntries RPC）
+			go rf.replicationTicker(term) // Leader 当选后立即开启协程循环，定期对其他节点进行日志同步或心跳（AppendEntries RPC）
 		}
 	}
 
@@ -98,12 +99,13 @@ func (rf *Raft) askVote(peer int, args *raftrpc.RequestVoteArgs, votes *int, ter
 func (rf *Raft) RequestVote(ctx context.Context, args *raftrpc.RequestVoteArgs) (reply *raftrpc.RequestVoteReply, err error) {
 	rf.mu.Lock()
 	defer rf.mu.Unlock()
+	reply = &raftrpc.RequestVoteReply{}
 	reply.VoteGranted = false
 	reply.Term = int32(rf.CurrentTerm)
 
 	// 1. 任期检查：候选人 term 更小则拒绝投票，term 更大则更新节点自己 term，并将角色变为 follower
 	if int(args.Term) < rf.CurrentTerm {
-		LOG(rf.me, rf.CurrentTerm, DWarn, fmt.Sprintf("Peer_%d Voted Failed, Term_%d > Candidate Term_%d  ", rf.me, args.CandidateId, args.Term))
+		LOG(rf.me, rf.CurrentTerm, DWarn, fmt.Sprintf("Peer_%d Voted Failed, Term_%d > Candidate Term_%d  ", rf.me, rf.CurrentTerm, args.Term))
 		return
 	}
 	if int(args.Term) > rf.CurrentTerm {
@@ -129,7 +131,7 @@ func (rf *Raft) RequestVote(ctx context.Context, args *raftrpc.RequestVoteArgs) 
 	rf.VotedFor = int(args.CandidateId)
 	reply.VoteGranted = true
 	rf.persist()
-	rf.resetTimer()
+	rf.resetElectionTimer()
 
 	LOG(rf.me, rf.CurrentTerm, DVote, fmt.Sprintf("Peer_%d Voted for Candidate Peer_%d in Term_%d", rf.me, args.CandidateId, rf.CurrentTerm))
 	return
@@ -144,8 +146,8 @@ func (rf *Raft) RequestVote(ctx context.Context, args *raftrpc.RequestVoteArgs) 
 //	return time.Since(rf.electionStart) > rf.electionTimeout
 //}
 
-// 重置随机选举超时时间（需在锁内调用，防止多个 goroutine 并发 Reset/Stop 造成timer无效或反复触发）
-func (rf *Raft) resetTimer() {
+// 重置选举计时器（需在锁内调用，防止多个 goroutine 并发 Reset/Stop 造成timer无效或反复触发）
+func (rf *Raft) resetElectionTimer() {
 	conf := config.Get().Raft
 
 	// 随机选举超时时间，通常在 [150ms, 300ms] 范围内
