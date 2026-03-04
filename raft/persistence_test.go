@@ -19,8 +19,8 @@ func setupPersister(t *testing.T) *tools.Persister {
 	t.Helper()
 	tmp := t.TempDir()
 	cfg := config.Get()
-	cfg.Persistence.RaftStateDir = filepath.Join(tmp, "raft_state.bin")
-	cfg.Persistence.SnapshotDir = filepath.Join(tmp, "snapshot.bin")
+	cfg.Persistence.RaftStatePath = filepath.Join(tmp, "raft_state.bin")
+	cfg.Persistence.SnapshotPath = filepath.Join(tmp, "snapshot.bin")
 	return tools.MakePersister()
 }
 
@@ -49,7 +49,7 @@ func TestPersistAndReadPersist_RoundTrip(t *testing.T) {
 	rf2 := &Raft{persister: ps, log: NewLog(0, 0, nil)}
 	rf2.commitIndex = 0
 	rf2.lastApplied = 0
-	rf2.readPersist(nil)
+	rf2.readPersist()
 
 	if rf2.CurrentTerm != rf.CurrentTerm {
 		t.Fatalf("CurrentTerm mismatch: got %d want %d", rf2.CurrentTerm, rf.CurrentTerm)
@@ -82,15 +82,15 @@ func TestReadPersist_EmptyStateIsNoop(t *testing.T) {
 	ps := setupPersister(t)
 	// Ensure there is no persisted state on disk.
 	cfg := config.Get()
-	_ = os.Remove(cfg.Persistence.RaftStateDir)
-	_ = os.Remove(cfg.Persistence.SnapshotDir)
+	_ = os.Remove(cfg.Persistence.RaftStatePath)
+	_ = os.Remove(cfg.Persistence.SnapshotPath)
 
 	rf := &Raft{persister: ps, log: NewLog(0, 0, nil)}
 	rf.CurrentTerm = 99
 	rf.VotedFor = 88
 	rf.commitIndex = 7
 	rf.lastApplied = 6
-	rf.readPersist(nil)
+	rf.readPersist()
 
 	if rf.CurrentTerm != 99 || rf.VotedFor != 88 {
 		t.Fatalf("readPersist should not change term/vote when no state exists")
@@ -114,7 +114,7 @@ func TestPersist_OverwritesPreviousState(t *testing.T) {
 	rf.persist()
 
 	rf2 := &Raft{persister: ps, log: NewLog(0, 0, nil)}
-	rf2.readPersist(nil)
+	rf2.readPersist()
 
 	if rf2.CurrentTerm != 6 {
 		t.Fatalf("CurrentTerm mismatch after overwrite: got %d want %d", rf2.CurrentTerm, 6)
