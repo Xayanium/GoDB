@@ -1,0 +1,79 @@
+syntax = "proto3";
+
+package shardctrler;
+
+option go_package = "./shardctrler;shardctrler";
+
+// ShardCtrler 服务定义
+service ShardCtrler {
+  // 添加一组副本组
+  rpc Join(JoinRequest) returns (JoinResponse);
+
+  // 删除一组副本组
+  rpc Leave(LeaveRequest) returns (LeaveResponse);
+
+  // 将一个分片移动到指定的副本组
+  rpc Move(MoveRequest) returns (MoveResponse);
+
+  // 查询指定编号的配置
+  rpc Query(QueryRequest) returns (QueryResponse);
+}
+
+// Join 请求
+message JoinRequest {
+  map<int32, ServerList> servers = 1;  // gid -> 服务器地址 列表映射
+  int64 client_id = 2; // 客户端唯一标识符，用于去重和追踪请求来源
+  int64 seq_id = 3; // 请求序列号，配合 client_id 实现幂等性
+}
+
+message ServerList {
+  repeated string servers = 1;
+}
+
+// Join 响应
+message JoinResponse {
+  string err = 1;  // OK, ErrWrongLeader, ErrTimeout
+}
+
+// Leave 请求
+message LeaveRequest {
+  repeated int32 gids = 1; // 要删除的副本组 ID 列表
+  int64 client_id = 2;
+  int64 seq_id = 3;
+}
+
+// Leave 响应
+message LeaveResponse {
+  string err = 1;
+}
+
+// Move 请求
+message MoveRequest {
+  int32 shard = 1; // 要移动的分片编号
+  int32 gid = 2; // 目标副本组 ID，将指定的分片分配给这个副本组管理
+  int64 client_id = 3;
+  int64 seq_id = 4;
+}
+
+// Move 响应
+message MoveResponse {
+  string err = 1;
+}
+
+// Query 请求
+message QueryRequest {
+  int32 num = 1;  // 期望的配置编号，-1 表示最新配置
+}
+
+// Query 响应
+message QueryResponse {
+  string err = 1;
+  Config config = 2;
+}
+
+// 配置信息
+message Config {
+  int32 num = 1;                        // 配置编号
+  repeated int32 shards = 2;            // 分片到 gid 的映射（固定10个元素）
+  map<int32, ServerList> groups = 3;    // gid -> 服务器列表映射
+}
