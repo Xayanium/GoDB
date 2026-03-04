@@ -42,7 +42,7 @@ message RequestVoteReply {
 message LogEntry {
   int32 term = 1;           // 该日志条目产生时 leader 的任期
   bool command_valid = 2;   // Raft层 通过 applyCh 通知上层时，用来区分该条目是否需要上层的状态机执行
-  bytes command = 3;        // 上层传入的命令内容
+  bytes command = 3;        // 上层传入的命令内容（序列化成了一个[]byte，上层需要反序列化）
 }
 
 // AppendEntries RPC 请求参数
@@ -63,6 +63,8 @@ message AppendEntriesReply {
   // 加速 leader 回退的冲突提示字段（follower 和 leader 在 prev_log_index 处日志 term 不同）
   int32 conflict_term = 3;  // follower 在 prev_log_index 处日志的 term
   int32 conflict_index = 4; // conflict_term 在 follower 日志中最早出现的位置
+
+  bool need_snapshot = 5;       // leader 的 prev_log_index 落在 follower 的快照中，follower 需要 leader 发送 InstallSnapshot RPC 来安装快照
 }
 
 
