@@ -1,6 +1,7 @@
 package raft
 
 import (
+	"GoDB/config"
 	raftrpc "GoDB/rpc/raft"
 	"GoDB/tools"
 	"fmt"
@@ -22,7 +23,7 @@ const (
 
 type ApplyMsg struct {
 	CommandValid bool        // 是否是上层状态机需要执行的日志条目
-	Command      interface{} // 日志条目里存的用户命令（kv server 的 Put/Append/Get 请求内容等）
+	Command      interface{} // 日志条目里存的用户命令（kv server 的 Put/Append/Get 请求内容等），是一个 *raftrpc.LogEntry.Command 类型
 	CommandIndex int         // 该命令在节点本地日志中的索引号（log index）
 
 	SnapshotValid bool   // 是否快照
@@ -45,8 +46,8 @@ type Raft struct {
 	log *Log // 本地日志对象
 
 	// 仅 leader 使用
-	nextIndex  []int // leader 对每个 follower 的 下一条要发送的日志索引
-	matchIndex []int // leader 认为的每个 follower 已经复制到的最大日志索引
+	nextIndex  []int // leader 对每个 follower 的 下一条要发送的日志索引（全局日志索引）
+	matchIndex []int // leader 认为的每个 follower 已经复制到的最大日志索引（全局日志索引）
 
 	// 该节点保存的"大多数节点认同的系统中已提交的最高日志索引"
 	// follower由leader的LeaderCommit更新，leader由matchIndex多数派更新
@@ -54,7 +55,7 @@ type Raft struct {
 
 	lastApplied int           // 该节点已经应用到状态机的最高日志索引，永远满足 lastApplied <= commitIndex
 	applyCh     chan ApplyMsg // Raft 把 ApplyMsg 通过Channel发送给上层服务
-	snapPending bool          // 有一个快照需要优先安装/发送到 applyCh
+	isSnapshots bool          // 发送到 applyCh 内容是否是快照
 	applyCond   *sync.Cond    // 用于唤醒 apply goroutine。
 
 	//electionStart   time.Time     // 上一次“重置选举计时器”的时间点
@@ -92,10 +93,11 @@ func Make(peers []raftrpc.RaftServiceClient, me int, persister *tools.Persister,
 	// 从持久化的数据文件读取 raftstate、snapshot 配置，覆盖部分初始值
 	rf.readPersist()
 
-	// 初始化选举超时计时器
+	// 初始化相关计时器
 	rf.mu.Lock()
-	rf.electionTimer = time.NewTimer(3000 * time.Millisecond)
-	rf.resetTimer()
+	cfg := config.Get()
+	rf.electionTimer = time.NewTimer(time.Duration(cfg.Raft.ElectionTimeoutMax) * time.Millisecond)
+	rf.resetElectionTimer()
 	rf.mu.Unlock()
 
 	// todo: 启动后台协程循环：选举、日志复制、应用日志、快照
