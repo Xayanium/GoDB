@@ -297,6 +297,7 @@ type AppendEntriesReply struct {
 	// 加速 leader 回退的冲突提示字段（follower 和 leader 在 prev_log_index 处日志 term 不同）
 	ConflictTerm  int32 `protobuf:"varint,3,opt,name=conflict_term,json=conflictTerm,proto3" json:"conflict_term,omitempty"`    // follower 在 prev_log_index 处日志的 term
 	ConflictIndex int32 `protobuf:"varint,4,opt,name=conflict_index,json=conflictIndex,proto3" json:"conflict_index,omitempty"` // conflict_term 在 follower 日志中最早出现的位置
+	NeedSnapshot  bool  `protobuf:"varint,5,opt,name=need_snapshot,json=needSnapshot,proto3" json:"need_snapshot,omitempty"`    // leader 的 prev_log_index 落在 follower 的快照中，follower 需要 leader 发送 InstallSnapshot RPC 来安装快照
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -357,6 +358,13 @@ func (x *AppendEntriesReply) GetConflictIndex() int32 {
 		return x.ConflictIndex
 	}
 	return 0
+}
+
+func (x *AppendEntriesReply) GetNeedSnapshot() bool {
+	if x != nil {
+		return x.NeedSnapshot
+	}
+	return false
 }
 
 // InstallSnapshot RPC 请求参数
@@ -504,12 +512,13 @@ const file_proto_raft_proto_rawDesc = "" +
 	"\x0eprev_log_index\x18\x03 \x01(\x05R\fprevLogIndex\x12\"\n" +
 	"\rprev_log_term\x18\x04 \x01(\x05R\vprevLogTerm\x12(\n" +
 	"\aentries\x18\x05 \x03(\v2\x0e.raft.LogEntryR\aentries\x12#\n" +
-	"\rleader_commit\x18\x06 \x01(\x05R\fleaderCommit\"\x8e\x01\n" +
+	"\rleader_commit\x18\x06 \x01(\x05R\fleaderCommit\"\xb3\x01\n" +
 	"\x12AppendEntriesReply\x12\x12\n" +
 	"\x04term\x18\x01 \x01(\x05R\x04term\x12\x18\n" +
 	"\asuccess\x18\x02 \x01(\bR\asuccess\x12#\n" +
 	"\rconflict_term\x18\x03 \x01(\x05R\fconflictTerm\x12%\n" +
-	"\x0econflict_index\x18\x04 \x01(\x05R\rconflictIndex\"\xc0\x01\n" +
+	"\x0econflict_index\x18\x04 \x01(\x05R\rconflictIndex\x12#\n" +
+	"\rneed_snapshot\x18\x05 \x01(\bR\fneedSnapshot\"\xc0\x01\n" +
 	"\x13InstallSnapshotArgs\x12\x12\n" +
 	"\x04term\x18\x01 \x01(\x05R\x04term\x12\x1b\n" +
 	"\tleader_id\x18\x02 \x01(\x05R\bleaderId\x12.\n" +
