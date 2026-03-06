@@ -2,10 +2,11 @@ package config
 
 import (
 	"fmt"
-	"gopkg.in/yaml.v3"
 	"os"
 	"path/filepath"
 	"sync"
+
+	"gopkg.in/yaml.v3"
 )
 
 var (
@@ -52,6 +53,10 @@ func DefaultConfig() *GlobalConfig {
 			ApplyInterval:      10,
 			SnapshotThreshold:  1000,
 			MaxLogSize:         10 * 1024 * 1024, // 10MB
+		},
+		ShardCtrler: ShardCtrlerConfig{
+			NShards:          10,
+			ClientReqTimeout: 500,
 		},
 		Network: NetworkConfig{
 			RPCTimeout:     5000,

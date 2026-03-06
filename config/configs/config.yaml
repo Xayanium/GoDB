@@ -38,6 +38,10 @@ raft:
   snapshot_threshold: 1000               # 快照阈值（日志条目数）
   max_log_size: 10485760                 # 最大日志大小（10MB）
 
+shardctrler:
+  nshards: 10                            # shards 分片数量
+  client_req_timeout: 500                    # 客户端请求超时时间（毫秒）
+
 network:
   rpc_timeout: 5000                      # RPC 超时时间（毫秒）
   max_retries: 3                         # 最大重试次数

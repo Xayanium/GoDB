@@ -6,6 +6,7 @@ type GlobalConfig struct {
 	Persistence PersistenceConfig `yaml:"persistence"`
 	Logging     LogConfig         `yaml:"logging"`
 	Raft        RaftConfig        `yaml:"raft"`
+	ShardCtrler ShardCtrlerConfig `yaml:"shardctrler"`
 	Network     NetworkConfig     `yaml:"network"`
 }
 
@@ -63,4 +64,10 @@ type NetworkConfig struct {
 	CertFile       string `yaml:"cert_file"`       // 证书文件路径
 	KeyFile        string `yaml:"key_file"`        // 密钥文件路径
 	MaxConnections int    `yaml:"max_connections"` // 最大连接数
+}
+
+// ShardCtrlerConfig ShardCtrler 配置
+type ShardCtrlerConfig struct {
+	NShards          int `yaml:"nshards"`            // shards 分片数量
+	ClientReqTimeout int `yaml:"client_req_timeout"` // 客户端请求超时时间（毫秒）
 }
