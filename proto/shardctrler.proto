@@ -71,9 +71,9 @@ message QueryResponse {
   Config config = 2;
 }
 
-// 配置信息
+// 某个时刻的分片分配方案配置
 message Config {
-  int32 num = 1;                        // 配置编号
-  repeated int32 shards = 2;            // 分片到 gid 的映射（固定10个元素）
-  map<int32, ServerList> groups = 3;    // gid -> 服务器列表映射
+  int32 num = 1;                        // 配置的版本号，每次 Join / Leave / Move 都会生成一个新配置
+  repeated int32 shards = 2;            // 长度固定为 NShards，表示第 i 号分片由 gid=shards[i] 这个 replica group 负责读写
+  map<int32, ServerList> groups = 3;    // 记录每个 gid 对应的 raft 组里有哪些服务器
 }

@@ -489,12 +489,12 @@ func (x *QueryResponse) GetConfig() *Config {
 	return nil
 }
 
-// 配置信息
+// 某个时刻的分片分配方案配置
 type Config struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Num           int32                  `protobuf:"varint,1,opt,name=num,proto3" json:"num,omitempty"`                                                                                 // 配置编号
-	Shards        []int32                `protobuf:"varint,2,rep,packed,name=shards,proto3" json:"shards,omitempty"`                                                                    // 分片到 gid 的映射（固定10个元素）
-	Groups        map[int32]*ServerList  `protobuf:"bytes,3,rep,name=groups,proto3" json:"groups,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // gid -> 服务器列表映射
+	Num           int32                  `protobuf:"varint,1,opt,name=num,proto3" json:"num,omitempty"`                                                                                 // 配置的版本号，每次 Join / Leave / Move 都会生成一个新配置
+	Shards        []int32                `protobuf:"varint,2,rep,packed,name=shards,proto3" json:"shards,omitempty"`                                                                    // 长度固定为 NShards，表示第 i 号分片由 gid=shards[i] 这个 replica group 负责读写
+	Groups        map[int32]*ServerList  `protobuf:"bytes,3,rep,name=groups,proto3" json:"groups,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // 记录每个 gid 对应的 raft 组里有哪些服务器
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
