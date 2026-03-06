@@ -100,7 +100,6 @@ func Make(peers []raftrpc.RaftServiceClient, me int, persister *tools.Persister,
 	rf.resetElectionTimer()
 	rf.mu.Unlock()
 
-	// todo: 启动后台协程循环：选举、日志复制、应用日志、快照
 	go rf.electionTicker()
 	go rf.applicationTicker()
 
