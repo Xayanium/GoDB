@@ -21,13 +21,13 @@ service ShardCtrler {
 
 // Join 请求
 message JoinRequest {
-  map<int32, ServerList> servers = 1;  // gid -> 服务器地址 列表映射
+  map<int32, ServerList> servers = 1;  // gid -> 同组内所有 shardKV 服务器地址（服务名称） 列表映射（shardCtrler 中配置只保存名称）
   int64 client_id = 2; // 客户端唯一标识符，用于去重和追踪请求来源
   int64 seq_id = 3; // 请求序列号，配合 client_id 实现幂等性
 }
 
 message ServerList {
-  repeated string servers = 1;
+  repeated string servers = 1; // shardKV 服务名称（shardKV 中根据名称构造出 shardKV RPC client，用于各 KV 服务节点间通信）
 }
 
 // Join 响应

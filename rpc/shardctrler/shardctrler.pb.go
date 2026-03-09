@@ -24,7 +24,7 @@ const (
 // Join 请求
 type JoinRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Servers       map[int32]*ServerList  `protobuf:"bytes,1,rep,name=servers,proto3" json:"servers,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // gid -> 服务器地址 列表映射
+	Servers       map[int32]*ServerList  `protobuf:"bytes,1,rep,name=servers,proto3" json:"servers,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // gid -> 同组内所有 shardKV 服务器地址（服务名称） 列表映射（shardCtrler 中配置只保存名称）
 	ClientId      int64                  `protobuf:"varint,2,opt,name=client_id,json=clientId,proto3" json:"client_id,omitempty"`                                                         // 客户端唯一标识符，用于去重和追踪请求来源
 	SeqId         int64                  `protobuf:"varint,3,opt,name=seq_id,json=seqId,proto3" json:"seq_id,omitempty"`                                                                  // 请求序列号，配合 client_id 实现幂等性
 	unknownFields protoimpl.UnknownFields
@@ -84,7 +84,7 @@ func (x *JoinRequest) GetSeqId() int64 {
 
 type ServerList struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Servers       []string               `protobuf:"bytes,1,rep,name=servers,proto3" json:"servers,omitempty"`
+	Servers       []string               `protobuf:"bytes,1,rep,name=servers,proto3" json:"servers,omitempty"` // shardKV 服务名称（shardKV 中根据名称构造出 shardKV RPC client，用于各 KV 服务节点间通信）
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
