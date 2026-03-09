@@ -6,20 +6,20 @@ import (
 )
 
 type CtrlerStateMachine struct {
-	Configs []*shardctrler.Config // stateMachine 存储的配置列表，configs[i] 代表编号为 i 的配置（分片分配方案）
+	Configs []*ctrlerrpc.Config // stateMachine 存储的配置列表，configs[i] 代表编号为 i 的配置（分片分配方案）
 }
 
 func NewCtrlerStateMachine() *CtrlerStateMachine {
 	cfg := &CtrlerStateMachine{}
-	cfg.Configs = make([]*shardctrler.Config, 1)
-	cfg.Configs[0] = &shardctrler.Config{}
-	cfg.Configs[0].Groups = make(map[int32]*shardctrler.ServerList)
+	cfg.Configs = make([]*ctrlerrpc.Config, 1)
+	cfg.Configs[0] = &ctrlerrpc.Config{}
+	cfg.Configs[0].Groups = make(map[int32]*ctrlerrpc.ServerList)
 	cfg.Configs[0].Shards = make([]int32, NShards)
 	return cfg
 }
 
 // Query 根据版本号 num，获取相关配置，如果 num超出范围(如-1等)则返回最新配置
-func (csm *CtrlerStateMachine) Query(num int) (*shardctrler.Config, Err) {
+func (csm *CtrlerStateMachine) Query(num int) (*ctrlerrpc.Config, Err) {
 	if num < 0 || num >= len(csm.Configs) {
 		return csm.Configs[len(csm.Configs)-1], OK
 	}
@@ -38,7 +38,7 @@ func (csm *CtrlerStateMachine) Join(groups map[int][]string) Err {
 		if serverList, ok := newConf.Groups[int32(gid)]; ok {
 			serverList.Servers = append(serverList.Servers, newServers...)
 		} else {
-			newConf.Groups[int32(gid)] = &shardctrler.ServerList{Servers: newServers}
+			newConf.Groups[int32(gid)] = &ctrlerrpc.ServerList{Servers: newServers}
 		}
 	}
 
@@ -111,19 +111,19 @@ func (csm *CtrlerStateMachine) Move(shard, gid int) Err {
 // ============================================================================
 
 // 从stateMachine已有的最后一个 lastConfig 中复制得到一个新配置
-func getNewConf(lastConf *shardctrler.Config) *shardctrler.Config {
-	newConf := &shardctrler.Config{}
+func getNewConf(lastConf *ctrlerrpc.Config) *ctrlerrpc.Config {
+	newConf := &ctrlerrpc.Config{}
 	// 配置的版本号+1
 	newConf.Num = lastConf.Num + 1
 	// 复制 lastConfig 的 shards 分片方案（第 i 号分片由 gid=shards[i] 这个 replica group 负责读写）
 	newConf.Shards = make([]int32, NShards)
 	copy(newConf.Shards, lastConf.Shards)
 	// 复制 lastConfig 中每个 gid 对应的 raft 组里有的服务器
-	newConf.Groups = make(map[int32]*shardctrler.ServerList)
+	newConf.Groups = make(map[int32]*ctrlerrpc.ServerList)
 	for gid, servers := range lastConf.Groups {
 		newServers := make([]string, len(servers.Servers))
 		copy(newServers, servers.Servers)
-		newConf.Groups[gid] = &shardctrler.ServerList{Servers: newServers}
+		newConf.Groups[gid] = &ctrlerrpc.ServerList{Servers: newServers}
 	}
 	return newConf
 }
@@ -142,7 +142,7 @@ func getNewConf(lastConf *shardctrler.Config) *shardctrler.Config {
 //	gid       shard
 //	 1       [0, 1, 4]
 //	 2       [2, 3]
-func getGid2Shards(conf *shardctrler.Config) map[int][]int {
+func getGid2Shards(conf *ctrlerrpc.Config) map[int][]int {
 	gid2Shards := make(map[int][]int)
 	for gid, _ := range conf.Groups {
 		gid2Shards[int(gid)] = make([]int, 0)

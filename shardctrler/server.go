@@ -22,10 +22,10 @@ type ShardCtrler struct {
 	notifyChans    map[int]chan *OpReply        // 传递每条 client 操作的处理结果（client 的RPC请求封装为 Op 结构体并作为日志传入 Raft，等待 Raft 达成日志共识 和 server状态机执行后返回相关的结果）
 	duplicateTable map[int64]*LastOperationInfo // 去重表，存clientId对应的最后一次操作信息（seqId + reply）
 
-	shardctrler.UnimplementedShardCtrlerServer
+	ctrlerrpc.UnimplementedShardCtrlerServer
 }
 
-var _ shardctrler.ShardCtrlerServer = (*ShardCtrler)(nil)
+var _ ctrlerrpc.ShardCtrlerServer = (*ShardCtrler)(nil)
 
 // StartServer 初始化 ShardCtrler 结构体，启动 Raft 实例和 applyTask 协程循环
 func StartServer(servers []raftrpc.RaftServiceClient, me int, persister *tools.Persister) *ShardCtrler {
@@ -51,7 +51,7 @@ func StartServer(servers []raftrpc.RaftServiceClient, me int, persister *tools.P
 // RPC Server 端实现，接收来自 client 的 Join/Leave/Move/Query 请求，封装成 Op 结构体，交给 Raft 同步日志，并等待 Raft 达成共识、状态机执行后得到结果并回复 client
 // ============================================================================
 
-func (sc *ShardCtrler) Join(ctx context.Context, req *shardctrler.JoinRequest) (*shardctrler.JoinResponse, error) {
+func (sc *ShardCtrler) Join(ctx context.Context, req *ctrlerrpc.JoinRequest) (*ctrlerrpc.JoinResponse, error) {
 	servers := make(map[int][]string)
 	for k, v := range req.Servers {
 		servers[int(k)] = v.Servers
@@ -62,12 +62,12 @@ func (sc *ShardCtrler) Join(ctx context.Context, req *shardctrler.JoinRequest) (
 		clientId: req.ClientId,
 		seqId:    req.SeqId,
 	})
-	return &shardctrler.JoinResponse{
+	return &ctrlerrpc.JoinResponse{
 		Err: string(reply.Err),
 	}, nil
 }
 
-func (sc *ShardCtrler) Leave(ctx context.Context, req *shardctrler.LeaveRequest) (*shardctrler.LeaveResponse, error) {
+func (sc *ShardCtrler) Leave(ctx context.Context, req *ctrlerrpc.LeaveRequest) (*ctrlerrpc.LeaveResponse, error) {
 	gid := make([]int, len(req.Gids))
 	for i, v := range req.Gids {
 		gid[i] = int(v)
@@ -78,12 +78,12 @@ func (sc *ShardCtrler) Leave(ctx context.Context, req *shardctrler.LeaveRequest)
 		clientId: req.ClientId,
 		seqId:    req.SeqId,
 	})
-	return &shardctrler.LeaveResponse{
+	return &ctrlerrpc.LeaveResponse{
 		Err: string(reply.Err),
 	}, nil
 }
 
-func (sc *ShardCtrler) Move(ctx context.Context, req *shardctrler.MoveRequest) (*shardctrler.MoveResponse, error) {
+func (sc *ShardCtrler) Move(ctx context.Context, req *ctrlerrpc.MoveRequest) (*ctrlerrpc.MoveResponse, error) {
 	reply := sc.command(Op{
 		optype:   OpMove,
 		shard:    int(req.Shard),
@@ -92,17 +92,17 @@ func (sc *ShardCtrler) Move(ctx context.Context, req *shardctrler.MoveRequest) (
 		seqId:    req.SeqId,
 	})
 
-	return &shardctrler.MoveResponse{
+	return &ctrlerrpc.MoveResponse{
 		Err: string(reply.Err),
 	}, nil
 }
 
-func (sc *ShardCtrler) Query(ctx context.Context, req *shardctrler.QueryRequest) (*shardctrler.QueryResponse, error) {
+func (sc *ShardCtrler) Query(ctx context.Context, req *ctrlerrpc.QueryRequest) (*ctrlerrpc.QueryResponse, error) {
 	reply := sc.command(Op{
 		optype: OpQuery,
 		num:    int(req.Num),
 	})
-	return &shardctrler.QueryResponse{
+	return &ctrlerrpc.QueryResponse{
 		Err:    string(reply.Err),
 		Config: reply.ControllerConfig,
 	}, nil
@@ -218,7 +218,7 @@ func (sc *ShardCtrler) applyTask() {
 
 // 将日志中传递的 Op 操作，在 状态机上执行（配置的 Get/Join/Move/Delete）
 func (sc *ShardCtrler) applyToStateMachine(op *Op) *OpReply {
-	var cfg *shardctrler.Config
+	var cfg *ctrlerrpc.Config
 	var err Err
 	switch op.optype {
 	case OpQuery:

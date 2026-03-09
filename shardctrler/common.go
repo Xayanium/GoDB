@@ -46,7 +46,7 @@ type Op struct {
 
 // OpReply 记录 server 中 Query、Join、Leave、Move 操作的结果，用于 server 回复 client 的 RPC 响应
 type OpReply struct {
-	ControllerConfig *shardctrler.Config
+	ControllerConfig *ctrlerrpc.Config
 	Err              Err
 }
 

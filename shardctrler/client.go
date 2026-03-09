@@ -1,21 +1,21 @@
 package shardctrler
 
 import (
-	"GoDB/rpc/shardctrler"
+	ctrlerrpc "GoDB/rpc/shardctrler"
 	"context"
 	"crypto/rand"
 	"math/big"
 )
 
 type Clerk struct {
-	servers  []shardctrler.ShardCtrlerClient // 所有可联系的 shardctrler 服务器 RPC 端点列表
-	leaderId int                             // client 认为当前的leader的下标（使用 servers[leaderId] 获取 leader 服务实例）
-	clientId int64                           // client 的唯一ID，用于 server 识别哪个 client 发的请求
-	seqId    int64                           // 请求序号
+	servers  []ctrlerrpc.ShardCtrlerClient // 所有可联系的 shardctrler 服务器 RPC 端点列表
+	leaderId int                           // client 认为当前的leader的下标（使用 servers[leaderId] 获取 leader 服务实例）
+	clientId int64                         // client 的唯一ID，用于 server 识别哪个 client 发的请求
+	seqId    int64                         // 请求序号
 	// todo: log 日志
 }
 
-func MakeClerk(servers []shardctrler.ShardCtrlerClient) *Clerk {
+func MakeClerk(servers []ctrlerrpc.ShardCtrlerClient) *Clerk {
 	return &Clerk{
 		servers:  servers,
 		leaderId: 0,
@@ -29,9 +29,9 @@ func MakeClerk(servers []shardctrler.ShardCtrlerClient) *Clerk {
 // ============================================================================
 
 // Query 向 shardctrler server 查询指定编号的配置，编号为-1则返回最新配置（外部接口）
-func (ck *Clerk) Query(num int) *shardctrler.Config {
+func (ck *Clerk) Query(num int) *ctrlerrpc.Config {
 	for {
-		args := &shardctrler.QueryRequest{Num: int32(num)}
+		args := &ctrlerrpc.QueryRequest{Num: int32(num)}
 		// 先给当前 leaderId server 发送 ShardCtrler.Query RPC
 		reply, err := ck.servers[ck.leaderId].Query(context.Background(), args)
 		if err != nil || reply.Err != "" {
@@ -48,12 +48,12 @@ func (ck *Clerk) Query(num int) *shardctrler.Config {
 // Join 向 shardctrler server 申请添加新的 replica group（group 中有很多的 ShardKV 服务）
 func (ck *Clerk) Join(servers map[int][]string) {
 	for {
-		res := make(map[int32]*shardctrler.ServerList)
+		res := make(map[int32]*ctrlerrpc.ServerList)
 		for k, v := range servers {
-			res[int32(k)] = &shardctrler.ServerList{Servers: v}
+			res[int32(k)] = &ctrlerrpc.ServerList{Servers: v}
 		}
 
-		args := &shardctrler.JoinRequest{
+		args := &ctrlerrpc.JoinRequest{
 			Servers:  res,
 			ClientId: ck.clientId,
 			SeqId:    ck.seqId,
@@ -79,7 +79,7 @@ func (ck *Clerk) Leave(gids []int) {
 			gids32 = append(gids32, int32(gid))
 		}
 
-		args := &shardctrler.LeaveRequest{
+		args := &ctrlerrpc.LeaveRequest{
 			Gids:     gids32,
 			ClientId: ck.clientId,
 			SeqId:    ck.seqId,
@@ -100,7 +100,7 @@ func (ck *Clerk) Leave(gids []int) {
 // Move 向 shardctrler server 申请将某个 shard 指派给指定的 replica group
 func (ck *Clerk) Move(shard int, gid int) {
 	for {
-		args := &shardctrler.MoveRequest{
+		args := &ctrlerrpc.MoveRequest{
 			Shard:    int32(shard),
 			Gid:      int32(gid),
 			ClientId: ck.clientId,

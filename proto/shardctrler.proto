@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package shardctrler;
 
-option go_package = "./shardctrler;shardctrler";
+option go_package = "./shardctrler;ctrlerrpc";
 
 // ShardCtrler 服务定义
 service ShardCtrler {

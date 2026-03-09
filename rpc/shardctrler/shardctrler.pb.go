@@ -4,7 +4,7 @@
 // 	protoc        v5.29.3
 // source: proto/shardctrler.proto
 
-package shardctrler
+package ctrlerrpc
 
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
@@ -596,7 +596,7 @@ const file_proto_shardctrler_proto_rawDesc = "" +
 	"\x04Join\x12\x18.shardctrler.JoinRequest\x1a\x19.shardctrler.JoinResponse\x12>\n" +
 	"\x05Leave\x12\x19.shardctrler.LeaveRequest\x1a\x1a.shardctrler.LeaveResponse\x12;\n" +
 	"\x04Move\x12\x18.shardctrler.MoveRequest\x1a\x19.shardctrler.MoveResponse\x12>\n" +
-	"\x05Query\x12\x19.shardctrler.QueryRequest\x1a\x1a.shardctrler.QueryResponseB\x1bZ\x19./shardctrler;shardctrlerb\x06proto3"
+	"\x05Query\x12\x19.shardctrler.QueryRequest\x1a\x1a.shardctrler.QueryResponseB\x19Z\x17./shardctrler;ctrlerrpcb\x06proto3"
 
 var (
 	file_proto_shardctrler_proto_rawDescOnce sync.Once

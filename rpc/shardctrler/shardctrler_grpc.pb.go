@@ -4,7 +4,7 @@
 // - protoc             v5.29.3
 // source: proto/shardctrler.proto
 
-package shardctrler
+package ctrlerrpc
 
 import (
 	context "context"

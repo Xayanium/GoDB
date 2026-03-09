@@ -14,66 +14,66 @@ type mockServer struct {
 	isLeader bool
 	timeout  bool
 	crash    bool
-	config   *shardctrler.Config
+	config   *ctrlerrpc.Config
 }
 
-func (m *mockServer) Join(ctx context.Context, in *shardctrler.JoinRequest, opts ...grpc.CallOption) (*shardctrler.JoinResponse, error) {
+func (m *mockServer) Join(ctx context.Context, in *ctrlerrpc.JoinRequest, opts ...grpc.CallOption) (*ctrlerrpc.JoinResponse, error) {
 	if m.crash {
 		return nil, errors.New("rpc error: server crashed")
 	}
 	if !m.isLeader {
-		return &shardctrler.JoinResponse{Err: ErrWrongLeader}, nil
+		return &ctrlerrpc.JoinResponse{Err: ErrWrongLeader}, nil
 	}
 	if m.timeout {
-		return &shardctrler.JoinResponse{Err: ErrTimeout}, nil
+		return &ctrlerrpc.JoinResponse{Err: ErrTimeout}, nil
 	}
-	return &shardctrler.JoinResponse{Err: ""}, nil
+	return &ctrlerrpc.JoinResponse{Err: ""}, nil
 }
 
-func (m *mockServer) Leave(ctx context.Context, in *shardctrler.LeaveRequest, opts ...grpc.CallOption) (*shardctrler.LeaveResponse, error) {
+func (m *mockServer) Leave(ctx context.Context, in *ctrlerrpc.LeaveRequest, opts ...grpc.CallOption) (*ctrlerrpc.LeaveResponse, error) {
 	if m.crash {
 		return nil, errors.New("rpc error: server crashed")
 	}
 	if !m.isLeader {
-		return &shardctrler.LeaveResponse{Err: ErrWrongLeader}, nil
+		return &ctrlerrpc.LeaveResponse{Err: ErrWrongLeader}, nil
 	}
 	if m.timeout {
-		return &shardctrler.LeaveResponse{Err: ErrTimeout}, nil
+		return &ctrlerrpc.LeaveResponse{Err: ErrTimeout}, nil
 	}
-	return &shardctrler.LeaveResponse{Err: ""}, nil
+	return &ctrlerrpc.LeaveResponse{Err: ""}, nil
 }
 
-func (m *mockServer) Move(ctx context.Context, in *shardctrler.MoveRequest, opts ...grpc.CallOption) (*shardctrler.MoveResponse, error) {
+func (m *mockServer) Move(ctx context.Context, in *ctrlerrpc.MoveRequest, opts ...grpc.CallOption) (*ctrlerrpc.MoveResponse, error) {
 	if m.crash {
 		return nil, errors.New("rpc error: server crashed")
 	}
 	if !m.isLeader {
-		return &shardctrler.MoveResponse{Err: ErrWrongLeader}, nil
+		return &ctrlerrpc.MoveResponse{Err: ErrWrongLeader}, nil
 	}
 	if m.timeout {
-		return &shardctrler.MoveResponse{Err: ErrTimeout}, nil
+		return &ctrlerrpc.MoveResponse{Err: ErrTimeout}, nil
 	}
-	return &shardctrler.MoveResponse{Err: ""}, nil
+	return &ctrlerrpc.MoveResponse{Err: ""}, nil
 }
 
-func (m *mockServer) Query(ctx context.Context, in *shardctrler.QueryRequest, opts ...grpc.CallOption) (*shardctrler.QueryResponse, error) {
+func (m *mockServer) Query(ctx context.Context, in *ctrlerrpc.QueryRequest, opts ...grpc.CallOption) (*ctrlerrpc.QueryResponse, error) {
 	if m.crash {
 		return nil, errors.New("rpc error: server crashed")
 	}
 	if !m.isLeader {
-		return &shardctrler.QueryResponse{Err: ErrWrongLeader}, nil
+		return &ctrlerrpc.QueryResponse{Err: ErrWrongLeader}, nil
 	}
 	if m.timeout {
-		return &shardctrler.QueryResponse{Err: ErrTimeout}, nil
+		return &ctrlerrpc.QueryResponse{Err: ErrTimeout}, nil
 	}
-	return &shardctrler.QueryResponse{Err: "", Config: m.config}, nil
+	return &ctrlerrpc.QueryResponse{Err: "", Config: m.config}, nil
 }
 
 func TestClerk_Query(t *testing.T) {
-	servers := []shardctrler.ShardCtrlerClient{
+	servers := []ctrlerrpc.ShardCtrlerClient{
 		&mockServer{crash: true},
 		&mockServer{isLeader: false},
-		&mockServer{isLeader: true, config: &shardctrler.Config{Num: 1}},
+		&mockServer{isLeader: true, config: &ctrlerrpc.Config{Num: 1}},
 	}
 	ck := MakeClerk(servers)
 
@@ -84,7 +84,7 @@ func TestClerk_Query(t *testing.T) {
 }
 
 func TestClerk_Join(t *testing.T) {
-	servers := []shardctrler.ShardCtrlerClient{
+	servers := []ctrlerrpc.ShardCtrlerClient{
 		&mockServer{crash: true},
 		&mockServer{isLeader: false},
 		&mockServer{isLeader: true},
@@ -100,7 +100,7 @@ func TestClerk_Join(t *testing.T) {
 }
 
 func TestClerk_Leave(t *testing.T) {
-	servers := []shardctrler.ShardCtrlerClient{
+	servers := []ctrlerrpc.ShardCtrlerClient{
 		&mockServer{crash: true},
 		&mockServer{isLeader: false},
 		&mockServer{isLeader: true},
@@ -114,7 +114,7 @@ func TestClerk_Leave(t *testing.T) {
 }
 
 func TestClerk_Move(t *testing.T) {
-	servers := []shardctrler.ShardCtrlerClient{
+	servers := []ctrlerrpc.ShardCtrlerClient{
 		&mockServer{crash: true},
 		&mockServer{isLeader: false},
 		&mockServer{isLeader: true},
