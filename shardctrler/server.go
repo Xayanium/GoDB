@@ -19,7 +19,7 @@ type ShardCtrler struct {
 	dead           int32                        // Kill 标记
 	lastApplied    int                          // 防止重复 应用 ApplyCh 中传递的日志
 	stateMachine   *CtrlerStateMachine          // 控制状态机（真正执行 Join/Leave/Move/Query 并维护 Config 列表的地方）
-	notifyChans    map[int]chan *OpReply        // 传递每条 client 操作的处理结果（client 的RPC请求封装为 Op 结构体并作为日志传入 Raft，等待 Raft 达成日志共识 和 server状态机执行后返回相关的结果）
+	notifyChs      map[int]chan *OpReply        // 传递每条 client 操作的处理结果（client 的RPC请求封装为 Op 结构体并作为日志传入 Raft，等待 Raft 达成日志共识 和 server状态机执行后返回相关的结果）
 	duplicateTable map[int64]*LastOperationInfo // 去重表，存clientId对应的最后一次操作信息（seqId + reply）
 
 	ctrlerrpc.UnimplementedShardCtrlerServer
@@ -40,7 +40,7 @@ func StartServer(servers []raftrpc.RaftServiceClient, me int, persister *tools.P
 	sc.dead = 0
 	sc.lastApplied = 0
 	sc.stateMachine = NewCtrlerStateMachine()
-	sc.notifyChans = make(map[int]chan *OpReply)
+	sc.notifyChs = make(map[int]chan *OpReply)
 	sc.duplicateTable = make(map[int64]*LastOperationInfo)
 
 	go sc.applyTask() // 启动协程循环，处理 Raft ApplyCh 中传回的信息
@@ -133,10 +133,10 @@ func (sc *ShardCtrler) command(op Op) *OpReply {
 
 	// 3. 等待 Raft 达成共识、状态机执行后得到结果并回复 client
 	sc.mu.Lock() // 操作 map，加锁
-	if _, ok := sc.notifyChans[index]; !ok {
-		sc.notifyChans[index] = make(chan *OpReply, 1)
+	if _, ok := sc.notifyChs[index]; !ok {
+		sc.notifyChs[index] = make(chan *OpReply, 1)
 	}
-	notifyCh := sc.notifyChans[index]
+	notifyCh := sc.notifyChs[index]
 	sc.mu.Unlock()
 
 	select {
@@ -147,10 +147,10 @@ func (sc *ShardCtrler) command(op Op) *OpReply {
 		reply.Err = ErrTimeout
 	}
 
-	// 4. 无论成功或失败，都要清理 notifyChans 中对应 index 的通道，防止内存泄漏
+	// 4. 无论成功或失败，都要清理 notifyChs 中对应 index 的通道，防止内存泄漏
 	go func() {
 		sc.mu.Lock()
-		delete(sc.notifyChans, index)
+		delete(sc.notifyChs, index)
 		sc.mu.Unlock()
 	}()
 
@@ -158,10 +158,10 @@ func (sc *ShardCtrler) command(op Op) *OpReply {
 }
 
 // ============================================================================
-// 将 Raft层 提交的日志应用到状态机，并通过 notifyChans 通道通知等待的 RPC Server 端
+// 将 Raft层 提交的日志应用到状态机，并通过 notifyChs 通道通知等待的 RPC Server 端
 // ============================================================================
 
-// 协程循环，处理 Raft ApplyCh 中传递的已提交日志(日志复制达成共识)，执行状态机，并将结果通过 notifyChans 通道通知等待的 RPC Server 端
+// 协程循环，处理 Raft ApplyCh 中传递的已提交日志(日志复制达成共识)，执行状态机，并将结果通过 notifyChs 通道通知等待的 RPC Server 端
 func (sc *ShardCtrler) applyTask() {
 	for !sc.isKilled() {
 		select {
@@ -196,10 +196,10 @@ func (sc *ShardCtrler) applyTask() {
 
 				// raft应用结果通过 notifyChan 传回 leader server，用于返回 client RPC
 				if _, isLeader := sc.rf.GetState(); isLeader {
-					if _, ok := sc.notifyChans[msg.CommandIndex]; !ok {
-						sc.notifyChans[msg.CommandIndex] = make(chan *OpReply, 1)
+					if _, ok := sc.notifyChs[msg.CommandIndex]; !ok {
+						sc.notifyChs[msg.CommandIndex] = make(chan *OpReply, 1)
 					}
-					notifyCh := sc.notifyChans[msg.CommandIndex]
+					notifyCh := sc.notifyChs[msg.CommandIndex]
 
 					select {
 					case notifyCh <- &OpReply{
