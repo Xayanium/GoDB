@@ -57,10 +57,10 @@ func (sc *ShardCtrler) Join(ctx context.Context, req *ctrlerrpc.JoinRequest) (*c
 		servers[int(k)] = v.Servers
 	}
 	reply := sc.command(Op{
-		optype:   OpJoin,
-		servers:  servers,
-		clientId: req.ClientId,
-		seqId:    req.SeqId,
+		Optype:   OpJoin,
+		Servers:  servers,
+		ClientId: req.ClientId,
+		SeqId:    req.SeqId,
 	})
 	return &ctrlerrpc.JoinResponse{
 		Err: string(reply.Err),
@@ -73,10 +73,10 @@ func (sc *ShardCtrler) Leave(ctx context.Context, req *ctrlerrpc.LeaveRequest) (
 		gid[i] = int(v)
 	}
 	reply := sc.command(Op{
-		optype:   OpLeave,
-		gids:     gid,
-		clientId: req.ClientId,
-		seqId:    req.SeqId,
+		Optype:   OpLeave,
+		Gids:     gid,
+		ClientId: req.ClientId,
+		SeqId:    req.SeqId,
 	})
 	return &ctrlerrpc.LeaveResponse{
 		Err: string(reply.Err),
@@ -85,11 +85,11 @@ func (sc *ShardCtrler) Leave(ctx context.Context, req *ctrlerrpc.LeaveRequest) (
 
 func (sc *ShardCtrler) Move(ctx context.Context, req *ctrlerrpc.MoveRequest) (*ctrlerrpc.MoveResponse, error) {
 	reply := sc.command(Op{
-		optype:   OpMove,
-		shard:    int(req.Shard),
-		gid:      int(req.Gid),
-		clientId: req.ClientId,
-		seqId:    req.SeqId,
+		Optype:   OpMove,
+		Shard:    int(req.Shard),
+		Gid:      int(req.Gid),
+		ClientId: req.ClientId,
+		SeqId:    req.SeqId,
 	})
 
 	return &ctrlerrpc.MoveResponse{
@@ -99,8 +99,8 @@ func (sc *ShardCtrler) Move(ctx context.Context, req *ctrlerrpc.MoveRequest) (*c
 
 func (sc *ShardCtrler) Query(ctx context.Context, req *ctrlerrpc.QueryRequest) (*ctrlerrpc.QueryResponse, error) {
 	reply := sc.command(Op{
-		optype: OpQuery,
-		num:    int(req.Num),
+		Optype: OpQuery,
+		Num:    int(req.Num),
 	})
 	return &ctrlerrpc.QueryResponse{
 		Err:    string(reply.Err),
@@ -113,9 +113,9 @@ func (sc *ShardCtrler) command(op Op) *OpReply {
 	reply := &OpReply{}
 
 	// 1. 写请求幂等性检验
-	if op.optype != OpQuery {
+	if op.Optype != OpQuery {
 		sc.mu.Lock() // 操作 map，加锁
-		if info, ok := sc.duplicateTable[op.clientId]; ok {
+		if info, ok := sc.duplicateTable[op.ClientId]; ok {
 			reply.ControllerConfig = info.Reply.ControllerConfig
 			reply.Err = info.Reply.Err
 			sc.mu.Unlock()
@@ -178,17 +178,17 @@ func (sc *ShardCtrler) applyTask() {
 				op := msg.Command.(Op)
 				var reply *OpReply
 
-				if op.optype == OpQuery {
+				if op.Optype == OpQuery {
 					// 查询请求不需要幂等性处理，直接执行状态机
 					reply = sc.applyToStateMachine(&op)
 				} else {
 					// 写请求幂等性处理：将写请求 clientId 对应的最后一次操作信息（seqId + reply）记录在去重表中
-					if info, ok := sc.duplicateTable[op.clientId]; ok && info.SeqId == op.seqId {
+					if info, ok := sc.duplicateTable[op.ClientId]; ok && info.SeqId == op.SeqId {
 						reply = info.Reply // 去重表有结果可直接返回
 					} else {
 						reply = sc.applyToStateMachine(&op)
-						sc.duplicateTable[op.clientId] = &LastOperationInfo{
-							SeqId: op.seqId,
+						sc.duplicateTable[op.ClientId] = &LastOperationInfo{
+							SeqId: op.SeqId,
 							Reply: reply,
 						}
 					}
@@ -220,15 +220,15 @@ func (sc *ShardCtrler) applyTask() {
 func (sc *ShardCtrler) applyToStateMachine(op *Op) *OpReply {
 	var cfg *ctrlerrpc.Config
 	var err Err
-	switch op.optype {
+	switch op.Optype {
 	case OpQuery:
-		cfg, err = sc.stateMachine.Query(op.num)
+		cfg, err = sc.stateMachine.Query(op.Num)
 	case OpJoin:
-		err = sc.stateMachine.Join(op.servers)
+		err = sc.stateMachine.Join(op.Servers)
 	case OpLeave:
-		err = sc.stateMachine.Leave(op.gids)
+		err = sc.stateMachine.Leave(op.Gids)
 	case OpMove:
-		err = sc.stateMachine.Move(op.shard, op.gid)
+		err = sc.stateMachine.Move(op.Shard, op.Gid)
 	}
 	return &OpReply{
 		ControllerConfig: cfg,

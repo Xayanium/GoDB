@@ -28,20 +28,20 @@ var (
 	ClientTimeout = config.Get().ShardCtrler.ClientReqTimeout
 )
 
-// Op 记录 client 发起的 Query、Join、Leave、Move 操作的请求，server 传给 Raft层 进行日志同步 和 server的状态机执行
+// Op 记录 client 发起的 Query、Join、Leave、Move 操作的请求，server 传给 Raft层 进行日志同步 和 server的状态机执行（由于Raft中使用gob进行序列化，首字母需要大写）
 type Op struct {
-	optype OpType
+	Optype OpType
 
 	// server 根据操作类型，应用到状态机
-	servers map[int][]string // Join 操作应用到状态机，记录新加入的 groupId 和对应的服务器列表
-	gids    []int            // Leave 操作应用到状态机，记录要删除的 groupId 列表
-	shard   int              // Move 操作应用到状态机，记录要移动的 shard 编号
-	gid     int              // Move 操作应用到状态机，记录要移动到的 groupId
-	num     int              // Query 操作应用到状态机，记录要查询的配置编号（-1 代表最新配置）
+	Servers map[int][]string // Join 操作应用到状态机，记录新加入的 groupId 和对应的服务器列表
+	Gids    []int            // Leave 操作应用到状态机，记录要删除的 groupId 列表
+	Shard   int              // Move 操作应用到状态机，记录要移动的 shard 编号
+	Gid     int              // Move 操作应用到状态机，记录要移动到的 groupId
+	Num     int              // Query 操作应用到状态机，记录要查询的配置编号（-1 代表最新配置）
 
 	// 用于去重表去重
-	clientId int64
-	seqId    int64
+	ClientId int64
+	SeqId    int64
 }
 
 // OpReply 记录 server 中 Query、Join、Leave、Move 操作的结果，用于 server 回复 client 的 RPC 响应
