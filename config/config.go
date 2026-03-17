@@ -58,6 +58,13 @@ func DefaultConfig() *GlobalConfig {
 			NShards:          10,
 			ClientReqTimeout: 500,
 		},
+		ShardKV: ShardKVConfig{
+			GetConfInterval:        1000,
+			ClientReqTimeout:       5000,
+			FetchConfigInterval:    1000,
+			ShardMigrationInterval: 1000,
+			ShardGcInterval:        1000,
+		},
 		Network: NetworkConfig{
 			RPCTimeout:     5000,
 			MaxRetries:     3,

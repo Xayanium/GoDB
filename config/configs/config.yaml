@@ -40,7 +40,14 @@ raft:
 
 shardctrler:
   nshards: 10                            # shards 分片数量
-  client_req_timeout: 500                    # 客户端请求超时时间（毫秒）
+  client_req_timeout: 5000               # 客户端请求超时时间（毫秒）
+
+shardkv:
+  getconf_interval: 1000                  # client获取shardctrler配置循环间隔（毫秒）
+  client_req_timeout: 5000                # 客户端请求超时时间（毫秒）
+  fetch_config_interval: 1000            # server获取shardctrler配置循环间隔（毫秒）
+  shard_migration_interval: 1000         # 分片迁移检测循环间隔（毫秒）
+  shard_gc_interval: 1000                # 分片垃圾回收检测循环间隔（毫秒）
 
 network:
   rpc_timeout: 5000                      # RPC 超时时间（毫秒）

@@ -7,6 +7,7 @@ type GlobalConfig struct {
 	Logging     LogConfig         `yaml:"logging"`
 	Raft        RaftConfig        `yaml:"raft"`
 	ShardCtrler ShardCtrlerConfig `yaml:"shardctrler"`
+	ShardKV     ShardKVConfig     `yaml:"shardkv"`
 	Network     NetworkConfig     `yaml:"network"`
 }
 
@@ -70,4 +71,13 @@ type NetworkConfig struct {
 type ShardCtrlerConfig struct {
 	NShards          int `yaml:"nshards"`            // shards 分片数量
 	ClientReqTimeout int `yaml:"client_req_timeout"` // 客户端请求超时时间（毫秒）
+}
+
+// ShardKVConfig ShardKV 配置
+type ShardKVConfig struct {
+	GetConfInterval        int `yaml:"getconf_interval"`         // 获取配置间隔（毫秒）
+	ClientReqTimeout       int `yaml:"client_req_timeout"`       // 客户端请求超时时间（毫秒）
+	FetchConfigInterval    int `yaml:"fetch_config_interval"`    // server获取shardctrler配置循环间隔（毫秒）
+	ShardMigrationInterval int `yaml:"shard_migration_interval"` // 分片迁移检测循环间隔（毫秒）
+	ShardGcInterval        int `yaml:"shard_gc_interval"`        // 分片垃圾回收检测循环间隔（毫秒）
 }
