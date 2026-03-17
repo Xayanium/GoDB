@@ -1,0 +1,89 @@
+syntax = "proto3";
+
+package shardkv;
+
+option go_package = "./shardkv;kvrpc";
+
+service ShardKV {
+  // Get RPC 请求
+  rpc Get(GetRequest) returns (GetResponse);
+
+  // Put/Append RPC 请求
+  rpc PutAppend(PutAppendRequest) returns (PutAppendResponse);
+
+  // 用于 MoveIn shard 组请求 MoveOut shard 组提供迁移分片的相关数据
+  rpc ShardMigration(ShardOperationRequest) returns (ShardOperationResponse);
+
+  // 用于 MoveIn shard 组请求 MoveOut shard 组清理相关分片数据
+  rpc ShardGC(ShardOperationRequest) returns (ShardOperationResponse);
+}
+
+// 错误码枚举
+enum ErrorCode {
+  OK = 0;
+  ERR_NO_KEY = 1;  // key 不存在
+  ERR_WRONG_GROUP = 2;  // 请求的 key 不属于当前 Group（分片不在这里）
+  ERR_WRONG_LEADER = 3; // 当前节点不是 Leader，需要重试其他节点
+  ERR_TIMEOUT = 4; // 请求超时
+  ERR_WRONG_CONFIG = 5; // 配置版本不匹配
+  ERR_NOT_READY = 6; // 服务未就绪
+  ERR_INTERNAL = 7; // 内部错误
+}
+
+// Get 请求
+message GetRequest {
+  string key = 1;
+}
+
+// Get 响应
+message GetResponse {
+  ErrorCode err = 1;
+  string value = 2;
+}
+
+// PutAppend 请求
+message PutAppendRequest {
+  string key = 1;
+  string value = 2;
+  int32 op = 3;  // "Put" 或 "Append"
+  int64 client_id = 4;
+  int64 seq_id = 5;
+}
+
+// PutAppend 响应
+message PutAppendResponse {
+  ErrorCode err = 1;
+}
+
+// 分片操作请求（用于迁移和GC）
+message ShardOperationRequest {
+  int32 config_num = 1;
+  repeated int32 shard_ids = 2;
+}
+
+// 分片操作响应
+message ShardOperationResponse {
+  ErrorCode err = 1;
+  // 以下只用于 ShardMigration
+  int32 config_num = 2;
+  map<int32, ShardData> shard_data = 3;
+  map<int64, LastOperationInfo> duplicate_table = 4;
+}
+
+// 分片数据
+message ShardData {
+  map<string, string> kv = 1;
+}
+
+// 最后操作信息（用于去重），只用于 RPC 响应中传递，业务处理时需转为 common 中的 LastOperationInfo
+message LastOperationInfo {
+  int64 seq_id = 1;
+  OpReply reply = 2;
+}
+
+// 操作回复，只用于 RPC 响应中传递，业务处理时需转为 common 中的 OpReply
+message OpReply {
+  string value = 1;
+  ErrorCode err = 2;
+}
+
